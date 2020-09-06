@@ -169,7 +169,41 @@ const RepoSearch: React.SFC<IProps> = (props) => {
           <p>{repo.description}</p>
           <div>
             {!repo.viewerHasStarred && (
-              <Mutation mutation={STAR_REPO} variables={{ repoId: repo.id }}>
+              <Mutation
+                mutation={STAR_REPO}
+                variables={{ repoId: repo.id }}
+                update={(cache) => {
+                  const data: { repository: IRepo } | null = cache.readQuery({
+                    query: GET_REPO,
+                    variables: {
+                      orgName: search.orgName,
+                      repoName: search.repoName,
+                    },
+                  });
+                  if (data === null) {
+                    return;
+                  }
+
+                  const newData = {
+                    ...data.repository,
+                    viewerHasStarred: true,
+                    stargazers: {
+                      ...data.repository.stargazers,
+                      totalCount: data.repository.stargazers.totalCount + 1,
+                    },
+                  };
+
+                  cache.writeQuery({
+                    query: GET_REPO,
+                    variables: {
+                      orgName: search.orgName,
+                      repoName: search.repoName,
+                    },
+                    data: { repository: newData },
+                  });
+                  setRepo(newData);
+                }}
+              >
                 {(addStar, { loading, error }) => (
                   <div>
                     <button disabled={loading} onClick={() => addStar()}>
